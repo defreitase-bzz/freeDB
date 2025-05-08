@@ -22,7 +22,6 @@ def run(args):
     columns = tolist(columns)
     values = tolist(values)
 
-    print(values)
 
 
     data_path = f"db/{table}.data"
@@ -46,18 +45,17 @@ def run(args):
             schema_table[schema[i]] = ""
 
 
-    print(schema_table)
-
-    if not matches_schema(schema_table, columns, values):
+    schema_valid, error = matches_schema(schema_table, columns, values)
+    if schema_valid:
         with open(data_path, 'a') as f:
             for line in values:
                 f.write(":".join([str(i) for i in line]) + '\n')
             return "Data inserted."
+    return f"Data not inserted. -> Error: {error}"
 
 def correct_format(table, columns, values):
     is_valid_columns = re.fullmatch(r"[a-zA-Z0-9,]+", columns) is not None
     is_valid_table_name = table.isalnum()
-    print(is_valid_columns)
 
     for i in values:
         is_valid_row = len(i.split(":")) == len(columns.split(","))
@@ -69,14 +67,13 @@ def correct_format(table, columns, values):
 
 
 def tolist(data):
-    print(data)
     if not isinstance(data, list):
         return data.split(",")
     else:
         for i in range(len(data)):
             parsed_list = data[i].split(":")
             for y in range(len(parsed_list)):
-                if parsed_list[y].isnumeric():
+                if parsed_list[y].isdigit():
                     parsed_list[y] = int(parsed_list[y])
             data[i] = parsed_list
         return data
@@ -86,12 +83,12 @@ def matches_schema(schema, columns, values):
         for y in range(len(values[i])):
             if columns[y] not in schema:
                 keys = list(schema.keys())
-                return f"Error: <{columns}> {columns[y]} doesnt match any table columns of table {keys}"
+                return False, f"Error: <{columns}> {columns[y]} doesnt match any table columns of table {keys}"
 
-            if schema[columns[y]] == "int" and not isinstance(values[i], int):
-                return False
-            elif schema[columns[y]] == "str" and not isinstance(values[i], str):
-                return False
-    return True
+            if schema[columns[y]] == "int" and not isinstance(values[i][y], int):
+                return False, f"Error: <{values[i]}> {values[i][y]} is not an integer"
+            elif schema[columns[y]] == "str" and not isinstance(values[i][y], str):
+                return False, f"Error: <{values[i]}> {values[i][y]} is not a string"
+    return True, "Matches!"
 
 
