@@ -11,10 +11,13 @@ def run(args):
 
     table = args[1]
 
-    schema_path = f"db/{table}.schema"
+    schema_path = f"db/{table}/{table}.schema"
 
     if not os.path.exists("db"):
         os.mkdir("db")
+
+    if not os.path.exists(f"db/{table}"):
+        os.mkdir(f"db/{table}")
 
     if os.path.exists(schema_path):
         return f"Error: table {table} already exists"
