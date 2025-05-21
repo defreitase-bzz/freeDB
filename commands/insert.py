@@ -51,7 +51,7 @@ def run(args):
                     idx_path = f"db/{table}/{table}_{name}.idx"
                     if os.path.exists(idx_path):
                         with open(idx_path, "r") as idxf:
-                            existing_ids = [int(l.strip()) for l in idxf if l.strip()]
+                            existing_ids = [int(l.strip().split(",")[0]) for l in idxf if l.strip()]
                     else:
                         with open(idx_path, "w") as f:
                             pass
@@ -73,7 +73,7 @@ def run(args):
             idx_path = f"db/{table}/{table}_{name}.idx"
             if os.path.exists(idx_path):
                 with open(idx_path, "r") as idxf:
-                    existing_ids = [int(l.strip()) for l in idxf if l.strip()]
+                    existing_ids = [int(l.strip().split(",")[0]) for l in idxf if l.strip()]
             else:
                 with open(idx_path, "w") as f:
                     pass

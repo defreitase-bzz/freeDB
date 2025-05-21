@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+python "$(dirname "$0")/freedb.py" "$@"
+
+read -r "enter"
 
 
-python ./freedb.py "$@"
-
-
-read -p "Press [Enter] to exit..."
