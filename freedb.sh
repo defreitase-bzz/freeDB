@@ -2,6 +2,5 @@
 
 python "$(dirname "$0")/freedb.py" "$@"
 
-read -r "enter"
 
-
+read -r
