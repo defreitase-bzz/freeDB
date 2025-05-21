@@ -14,6 +14,7 @@ def run(args):
     columns = args[2]
     values = args[3:]
 
+    print(values)
 
     if not correct_format(table, columns, values):
         return f"Error: <{params}> Command does not match required format"
@@ -97,7 +98,7 @@ def run(args):
                 df.seek(0, os.SEEK_END)
                 offset = df.tell()
 
-                record = ":".join(str(v) for v in row) + "\n"
+                record = ",".join(str(v) for v in row) + "\n"
                 df.write(record.encode())
 
                 new_id = row[pk_index]
@@ -110,9 +111,16 @@ def correct_format(table, columns, values):
     is_valid_table_name = table.isalnum()
 
     for i in values:
-        is_valid_row = len(i.split(":")) == len(columns.split(","))
+        in_quotes = False
+        count = 1  # mindestens ein Wert
 
-        if not all([is_valid_row, is_valid_columns, is_valid_table_name]):
+        for char in i:
+            if char == "'":
+                in_quotes = not in_quotes
+            elif char == ',' and not in_quotes:
+                count += 1
+
+        if count != len(columns.split(",")) or not is_valid_columns or not is_valid_table_name:
             return False
 
     return True
@@ -123,12 +131,31 @@ def tolist(data):
         return data.split(",")
     else:
         for i in range(len(data)):
-            parsed_list = data[i].split(":")
+            copy = data[i]
+            if "'" in data[i]:
+                in_quotes = False
+                copy = ""
+
+                for x in range(len(data[i])):
+                    if data[i][x] == "," and in_quotes:
+                        copy += "$"
+                    elif data[i][x] == "'" and not in_quotes:
+                        in_quotes = True
+                        copy += '"'
+                    elif data[i][x] == "'" and in_quotes:
+                        in_quotes = False
+                        copy += '"'
+                    else:
+                        copy += data[i][x]
+
+            parsed_list = [value.replace("$", ",") for value in copy.split(",")]
+
             for y in range(len(parsed_list)):
                 if parsed_list[y].isdigit():
                     parsed_list[y] = int(parsed_list[y])
             data[i] = parsed_list
         return data
+
 
 def matches_schema(schema, columns, values):
     for i in range(len(values)):
@@ -144,6 +171,7 @@ def matches_schema(schema, columns, values):
 
     return True, "Matches!"
 
+
 def binary_search(array, target):
     i, j = 0, len(array)
     m = 0
@@ -151,12 +179,10 @@ def binary_search(array, target):
     while j > i:
         m = (i + j) // 2
 
-        if m > target:
-            j = m-1
-        elif m < target:
-            i = m+1
+        if array[m] > target:
+            j = m
+        elif array[m] < target:
+            i = m + 1
         else:
             return m
     return m
-
-
