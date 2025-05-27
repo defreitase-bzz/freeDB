@@ -20,7 +20,7 @@ def run(args):
     cols = [s.split(":")[0] for s in schema]
     idx_map = {col: i+1 for i, col in enumerate(cols)}
 
-    awk_cmd = ["awk", 'BEGIN { FPAT = "([^,]+)|(\\"[^\\"]+\\")" }']
+    awk_cmd = ["awk", "-F,"]
 
     if join:
         other, left, right = join
@@ -36,19 +36,20 @@ def run(args):
         cols = [s.split(":")[0] for s in schema]
         other_idx_map = {col: i + 1 for i, col in enumerate(cols)}
 
-        ldx = other_idx_map[left]
-        rdx = idx_map[right]
-        cond_post = build_awk_cond(post_filters, idx_map, other_idx_map)
+        ldx = other_idx_map[left.split(".")[-1] if other in left else right.split(".")[-1]]
+        rdx = idx_map[right.split(".")[-1] if not other in right else left.split(".")[-1]]
+        cond_post = build_awk_cond(post_filters, idx_map, other_idx_map, other, ldx)
+        cond_pre = build_awk_cond(pre_filters, idx_map, other_idx_map, other, ldx)
         script = (
-            f'NR==FNR {{ a[${rdx}]=$0; next }} '
-            f'{{ if (${ldx} in a) ' +
+            f'NR==FNR {{ a[${ldx}]=$0; next }} '+
+            f'{{ if (${rdx} in a) ' +
             (f'if ({cond_post}) ' if cond_post else '') +
-            f'print $0 FS a[${ldx}] }}'
+            f'print $0 FS a[${rdx}] }}'
         )
         awk_cmd.append(script)
         awk_cmd.extend([other_file, data_file])
     else:
-        cond_pre = build_awk_cond(pre_filters, idx_map, other_idx_map=None)
+        cond_pre = build_awk_cond(pre_filters, idx_map, other_idx_map=None, other=None, ldx=None)
         proj = build_awk_proj(columns, idx_map, other_idx_map=None)
         awk_cmd.append(f'{cond_pre} {{ print {proj} }}')
         awk_cmd.append(data_file)
@@ -80,7 +81,7 @@ def parse_select(args):
     return table, columns, pre_filters, join, post_filters
 
 def parse_condition(cond):
-    m = re.match(r"^([^=<>]+)([=<>]{1})(.+)$", cond)
+    m = re.match(r"^([a-zA-Z_][a-zA-Z0-9_.]*)([=<>]{1})(.+)$", cond)
     if not m:
         raise ValueError(f"Invalid condition: {cond}")
     col, op, val = m.groups()
@@ -90,16 +91,16 @@ def parse_condition(cond):
         val = val.strip("'\"")
     return col, op, val
 
-def build_awk_cond(filters, idx_map, other_idx_map):
+def build_awk_cond(filters, idx_map, other_idx_map, other, ldx):
     parts = []
     for col, op, val in filters:
-        if "." in col and other_idx_map:
-            fld = other_idx_map[col]
+        if other in col and other_idx_map:
+            fld = other_idx_map[col.split(".")[-1]]
         else:
-            fld = idx_map[col]
+            fld = idx_map[col] if "." not in col else idx_map[col.split(".")[-1]]
         lit = f'"{val}"' if isinstance(val, str) else val
         op = "==" if op == "=" else op
-        parts.append(f'${fld} {op} {lit}')
+        parts.append(f'${fld} {op} {lit}' if not other_idx_map else "")
     return " && ".join(parts) if parts else "1"
 
 def build_awk_proj(columns, idx_map, other_idx_map):
@@ -110,7 +111,7 @@ def build_awk_proj(columns, idx_map, other_idx_map):
 
     for c in columns:
         if other_idx_map and "." in c:
-            col = c.split(",")[-1]
+            col = c.split(".")[-1]
             projection_parts.append(f"${other_idx_map[col]}")
         else:
             projection_parts.append(f"${idx_map[c]}")
