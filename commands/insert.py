@@ -110,7 +110,7 @@ def run(args):
 
 
 def correct_format(table, columns, values):
-    is_valid_columns = re.fullmatch(r"[a-zA-Z0-9,]+", columns) is not None
+    is_valid_columns = re.fullmatch(r"[a-zA-Z0-9,_]+", columns) is not None
     is_valid_table_name = table.isalnum()
 
     for i in values:

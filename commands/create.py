@@ -60,8 +60,21 @@ def correct_format(command, params):
 
 def check_keywords(line, table):
     has_primary_key = False
-    for i in line.split(","):
+    existing_pk_names = set()
 
+    for tname in os.listdir("db"):
+        if tname == table:
+            continue
+        schema_file = os.path.join("db", tname, f"{tname}.schema")
+        if os.path.exists(schema_file):
+            with open(schema_file, "r") as f:
+                schema_line = f.readline().strip()
+                for fielddef in schema_line.split(","):
+                    if "[PK" in fielddef:
+                        fieldname = fielddef.split(":")[0].strip()
+                        existing_pk_names.add(fieldname)
+
+    for i in line.split(","):
         if ":" in i:
             separated = i.split(":")
             data_type = re.sub(r"\[.*?\]", "", separated[1]).strip()
@@ -98,15 +111,22 @@ def check_keywords(line, table):
             return f"Error: <{line}> unknown keyword.", False
 
         if "PK" in keywords:
-            if "FK" in keywords:
+            if has_primary_key:
+                return f"Error: <{line}> <{i}> Table cannot have more than one primary key", False
+            elif "FK" in keywords:
                 return f"Error: <{line}> <{i}> field cannot be both primary key and foreign key at the same time.", False
             elif data_type and data_type != "int":
                 return f"Error: <{line}> <{i}> field that is primary key must be int and not {data_type}", False
             elif not data_type:
-                line = line.replace(field, field+":int")
+                line = line.replace(field, field + ":int")
             elif "not_null" not in keywords:
                 keywords += "not_null"
+
+            if field in existing_pk_names:
+                return f"Error: <{field}> already exists as a primary key in another table", False
+
             has_primary_key = True
+
         elif "FK" in keywords:
             if "not_null" not in keywords:
                 keywords += "not_null"
@@ -115,14 +135,13 @@ def check_keywords(line, table):
             elif data_type and data_type != "int":
                 return f"Error: <{line}> <{i}> field that is foreign key must be int and not {data_type}", False
             elif not data_type:
-                line = line.replace(field, field+":int")
+                line = line.replace(field, field + ":int")
 
     if not has_primary_key:
-        line = f"{table}ID:int[PK not_null auto]," + line
+        generated = f"{table}ID"
+        if generated in existing_pk_names:
+            return f"Error: auto-generated PK '{generated}' already exists in another table", False
+        line = f"{generated}:int[PK not_null auto]," + line
+
     return line, True
-
-
-
-
-
 
