@@ -1,3 +1,4 @@
+import importlib.util
 import re
 import os
 import subprocess
@@ -37,12 +38,17 @@ def run(args):
         other_schema_file = f"db/{other}/{other}.schema"
         if not os.path.exists(other_schema_file):
             return f"Error: table {other} does not exist"
-
         try:
             with open(other_schema_file, "r") as sf:
                 schema = sf.readline().strip().split(",")
         except Exception:
             return f"Error: could not read schema of table {other}"
+
+        if right.split(".")[-1] != left.split(".")[-1]:
+            return f"Error: keypairs of Join conditions must match do not match in name {left} <-> {right}"
+
+        if not check_keypair(left.split(".")[-1], schema_file, other_schema_file):
+            return f"Error: keypairs of Join conditions must be Primary Key on one side and Foreign Key on the other"
 
         cols = [s.split(":")[0] for s in schema]
         other_idx_map = {col: i + 1 for i, col in enumerate(cols)}
@@ -153,4 +159,43 @@ def build_awk_proj(columns, idx_map, other_idx_map, other):
             col = idx_map[c.split(".")[-1]]
             projection_parts.append(f"${col}")
     return ", ".join(projection_parts)
+
+
+def check_keypair(field, schema, other_schema):
+    with open(schema) as f1, open(other_schema) as f2:
+        schema_table_list = f1.readline().strip().split(",")
+        other_schema_table_list = f2.readline().strip().split(",")
+
+    p = 0
+
+    field_name = field.split(".")[-1]
+
+    schema_table_map = {}
+    other_schema_table_map = {}
+    schema_len = len(schema_table_list)
+    other_schema_len = len(other_schema_table_list)
+
+    while p < schema_len or p < other_schema_len:
+        if p < schema_len:
+            col, rest = schema_table_list[p].split(":")
+            dtype, sep, flag_part = rest.partition("[")
+            flags = [i for i in flag_part.rstrip("]").split() if i in ["PK", "FK"]]
+            schema_table_map[col] = flags[0] if flags else ""
+
+        if p < other_schema_len:
+            col, rest = other_schema_table_list[p].split(":")
+            dtype, sep, flag_part = rest.partition("[")
+            flags = [i for i in flag_part.rstrip("]").split() if i in ["PK", "FK"]]
+            other_schema_table_map[col] = flags[0] if flags else ""
+
+        p += 1
+
+    return (schema_table_map[field_name] == "PK" and other_schema_table_map[field_name] == "FK" or
+            schema_table_map[field_name] == "FK" and other_schema_table_map[field_name] == "PK")
+
+
+
+
+
+
 
