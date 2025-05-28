@@ -103,7 +103,10 @@ def run(args):
 
                 new_id = row[pk_index]
                 idxf.write(f"{new_id},{offset}\n")
-    return "Data inserted."
+
+        return f"Inserted {len(values)} row(s) into table '{table}'."
+    else:
+        return response
 
 
 def correct_format(table, columns, values):
@@ -112,7 +115,7 @@ def correct_format(table, columns, values):
 
     for i in values:
         in_quotes = False
-        count = 1  # mindestens ein Wert
+        count = 1
 
         for char in i:
             if char == "'":

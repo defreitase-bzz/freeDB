@@ -2,7 +2,7 @@ import os
 import re
 
 def run(args):
-    if 4 < len(args) < 3:
+    if len(args) < 3:
         params = " ".join([f"<{args[i]}>" for i in range(1, len(args))])
         return f"Usage: <{args[0]}> {params}"
 
@@ -51,7 +51,7 @@ def run(args):
     with open(schema_path, 'w') as f:
         f.write(line + '\n')
 
-    return "Table created."
+    return f"Created table '{table}' with schema: {line}"
 
 def correct_format(command, params):
     regex = re.fullmatch(r"[\[\]a-zA-Z0-9:,_ ]+", params) is not None
