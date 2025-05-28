@@ -13,7 +13,7 @@ def run(args):
     except Exception as e:
         return f"Error: {e}"
 
-    is_count = columns_raw.lower() == "count"
+    is_count = columns_raw.lower() == "-ct"
     columns = [] if is_count else columns_raw.split(",")
 
     data_file = f"db/{table}/{table}.data"
