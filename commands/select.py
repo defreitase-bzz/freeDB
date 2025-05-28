@@ -20,7 +20,6 @@ def run(args):
     schema_file = f"db/{table}/{table}.schema"
     if not os.path.exists(schema_file):
         return f"Error: table {table} does not exist"
-
     try:
         with open(schema_file, "r") as sf:
             schema = sf.readline().strip().split(",")
@@ -86,7 +85,7 @@ def run(args):
             f" joined with '{other}'" if join else "") + " matching the given conditions."
 
     if is_count:
-        return f"Found {output} matching row(s) in table '{table}'" + (f" joined with '{other}'" if join else "") + "."
+        return f"Found {output} matching row(s) in table '{table}'" + (f" joined with '{other}'" if join else "") + f".\n{output}"
 
     lines = output.split("\n")
     return f"Found {len(lines)} row(s) in table '{table}'" + (
