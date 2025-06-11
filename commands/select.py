@@ -131,7 +131,7 @@ def parse_condition(cond):
 def build_awk_cond(filters, idx_map, other_idx_map, other):
     parts = []
     for col, op, val in filters:
-        if other in col.split(".")[0] and other_idx_map:
+        if other and other in col.split(".")[0] and other_idx_map:
             fld = "b[" + str(other_idx_map[col.split(".")[-1]]) + "]"
         else:
             fld = idx_map[col] if "." not in col else idx_map[col.split(".")[-1]]
@@ -139,7 +139,8 @@ def build_awk_cond(filters, idx_map, other_idx_map, other):
         if op == "=":
             op = "=="
         elif op == "~":
-            awk_expr = f'${fld} ~ /{val}/' if fld[0] != "b" else f'{fld} ~ /{val}/'
+            fld_str = str(fld)
+            awk_expr = f'${fld} ~ /{val}/' if fld_str[0] != "b" else f'{fld} ~ /{val}/'
             parts.append(awk_expr)
             continue
         awk_expr = f'${fld} {op} {lit}' if fld[0] != "b" else f'{fld} {op} {lit}'
